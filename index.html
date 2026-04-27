@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HashBreaker — Password Cracking Analysis with Hashcat</title>
+    <meta name="description" content="Educational project demonstrating password cracking techniques using Hashcat with dictionary and rule-based attacks.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="scanline-overlay"></div>
+    <nav id="sidebar">
+        <div class="logo">
+            <div class="logo-icon">🔓</div>
+            <span>HashBreaker</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#dashboard" class="nav-link active" data-section="dashboard"><span class="nav-icon">📊</span>Dashboard</a></li>
+            <li><a href="#generate" class="nav-link" data-section="generate"><span class="nav-icon">🔑</span>Generate Hashes</a></li>
+            <li><a href="#attack" class="nav-link" data-section="attack"><span class="nav-icon">⚔️</span>Run Attack</a></li>
+            <li><a href="#results" class="nav-link" data-section="results"><span class="nav-icon">📈</span>Results</a></li>
+            <li><a href="#hashing" class="nav-link" data-section="hashing"><span class="nav-icon">🧬</span>Hash Algorithms</a></li>
+            <li><a href="#salting" class="nav-link" data-section="salting"><span class="nav-icon">🧂</span>Salting & Defense</a></li>
+            <li><a href="#commands" class="nav-link" data-section="commands"><span class="nav-icon">💻</span>Hashcat Commands</a></li>
+        </ul>
+        <div class="sidebar-footer">
+            <p>Cybersecurity Project</p>
+        </div>
+    </nav>
+
+    <main id="main-content">
+        <!-- DASHBOARD -->
+        <section id="dashboard" class="section active">
+            <div class="section-header">
+                <h1>Password Cracking Analysis</h1>
+                <p class="subtitle">Live data — generate hashes, run attacks, and analyze results</p>
+            </div>
+            <div id="empty-state" class="empty-state">
+                <div class="empty-icon">🔐</div>
+                <h2>No Data Yet</h2>
+                <p>Start by generating password hashes, then run attacks to see live results here.</p>
+                <button class="btn-primary" onclick="navigateTo('generate')">Generate Hashes →</button>
+            </div>
+            <div id="dashboard-content" class="hidden">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-label">Total Hashes</div>
+                        <div class="stat-bar"><div class="stat-bar-fill" id="bar-total" style="width:0%"></div></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-cracked">0</div>
+                        <div class="stat-label">Cracked</div>
+                        <div class="stat-bar"><div class="stat-bar-fill cracked" id="bar-cracked" style="width:0%"></div></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-rate">0%</div>
+                        <div class="stat-label">Crack Rate</div>
+                        <div class="stat-bar"><div class="stat-bar-fill time" id="bar-rate" style="width:0%"></div></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-uncracked">0</div>
+                        <div class="stat-label">Remaining</div>
+                        <div class="stat-bar"><div class="stat-bar-fill weak" id="bar-uncracked" style="width:0%"></div></div>
+                    </div>
+                </div>
+                <div class="dashboard-grid">
+                    <div class="card chart-card">
+                        <h3>Crack Rate by Attack Type</h3>
+                        <canvas id="attackChart"></canvas>
+                    </div>
+                    <div class="card chart-card">
+                        <h3>Password Strength Distribution</h3>
+                        <canvas id="complexityChart"></canvas>
+                    </div>
+                    <div class="card chart-card">
+                        <h3>Password Length Distribution</h3>
+                        <canvas id="lengthChart"></canvas>
+                    </div>
+                    <div class="card chart-card">
+                        <h3>Attack Timeline</h3>
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+                <div class="card" style="margin-top:20px">
+                    <div class="flex-between">
+                        <h3>Recent Activity Log</h3>
+                        <button class="btn-danger-sm" onclick="clearAllData()">Reset All Data</button>
+                    </div>
+                    <div id="activity-log" class="activity-log"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- GENERATE HASHES -->
+        <section id="generate" class="section">
+            <div class="section-header">
+                <h1>Generate Hashes</h1>
+                <p class="subtitle">Add passwords manually or generate random ones — NTLM hashes are created live</p>
+            </div>
+            <div class="gen-grid">
+                <div class="card">
+                    <h3>Add Passwords Manually</h3>
+                    <p class="card-desc">Enter passwords one per line. NTLM hashes will be generated instantly.</p>
+                    <textarea id="manual-passwords" placeholder="password123&#10;Summer2024!&#10;letmein&#10;Tr0ub4dor&3" rows="8"></textarea>
+                    <button class="btn-primary" id="btn-add-manual" onclick="addManualPasswords()">Hash & Store</button>
+                </div>
+                <div class="card">
+                    <h3>Generate Random Passwords</h3>
+                    <p class="card-desc">Auto-generate passwords of varying complexity for testing.</p>
+                    <div class="gen-controls">
+                        <div class="gen-row">
+                            <label>Count:</label>
+                            <input type="number" id="gen-count" value="50" min="1" max="500">
+                        </div>
+                        <div class="gen-row">
+                            <label>Mix:</label>
+                            <div class="gen-mix">
+                                <label class="check-label"><input type="checkbox" id="mix-weak" checked> Weak</label>
+                                <label class="check-label"><input type="checkbox" id="mix-medium" checked> Medium</label>
+                                <label class="check-label"><input type="checkbox" id="mix-strong" checked> Strong</label>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="generateRandomPasswords()">Generate & Hash</button>
+                </div>
+            </div>
+            <div class="card" style="margin-top:20px">
+                <h3>Add Target Hashes Directly</h3>
+                <p class="card-desc">Have existing NTLM hashes? Paste them here to test if the attack engine can crack them.</p>
+                <textarea id="manual-hashes" placeholder="8846f7eaee8fb117ad06bdd830b7586c&#10;31d6cfe0d16ae931b73c59d7e0c089c0" rows="3"></textarea>
+                <button class="btn-primary" onclick="addTargetHashes()">Add Target Hashes</button>
+            </div>
+            <div class="card" style="margin-top:20px">
+                <div class="flex-between">
+                    <h3>Stored Hashes (<span id="hash-count">0</span>)</h3>
+                    <div class="btn-group">
+                        <button class="btn-secondary" onclick="exportHashes()">Export .txt</button>
+                        <button class="btn-danger-sm" onclick="clearHashes()">Clear All</button>
+                    </div>
+                </div>
+                <div id="hash-table-wrap" class="table-wrap">
+                    <table id="hash-table">
+                        <thead><tr><th>#</th><th>Password</th><th>NTLM Hash</th><th>Strength</th><th>Status</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <p id="hash-empty" class="empty-text">No hashes stored yet. Add passwords above.</p>
+            </div>
+        </section>
+
+        <!-- RUN ATTACK -->
+        <section id="attack" class="section">
+            <div class="section-header">
+                <h1>Run Attack</h1>
+                <p class="subtitle">Simulate dictionary, rule-based, and brute-force attacks on your stored hashes</p>
+            </div>
+            <div class="card info-card" style="margin-bottom:20px">
+                <h3>🎯 Target Information</h3>
+                <p>When you run an attack below, the engine targets the passwords you added in the <strong>Generate Hashes</strong> section. You do not need to provide any external data—it tests against your live HashBreaker dataset!</p>
+            </div>
+            <div id="attack-no-data" class="empty-state small">
+                <p>No hashes to attack. <a href="#" onclick="navigateTo('generate');return false;">Generate some first →</a></p>
+            </div>
+            <div id="attack-panel" class="hidden">
+                <div class="attack-cards">
+                    <div class="card attack-option" id="opt-dict">
+                        <div class="attack-opt-header">
+                            <span class="attack-badge">Phase 1</span>
+                            <h3>Dictionary Attack</h3>
+                        </div>
+                        <p>Compares hashes against a built-in wordlist of 200+ common passwords.</p>
+                        <div class="attack-meta">
+                            <span>Wordlist: built-in (200+ words)</span>
+                        </div>
+                        <button class="btn-primary" onclick="runAttack('dictionary')">Run Dictionary Attack</button>
+                    </div>
+                    <div class="card attack-option" id="opt-rule">
+                        <div class="attack-opt-header">
+                            <span class="attack-badge">Phase 2</span>
+                            <h3>Rule-Based Attack</h3>
+                        </div>
+                        <p>Applies mutations: capitalize, append digits, leet-speak substitutions (l→1, e→3, etc).</p>
+                        <div class="attack-meta">
+                            <span>Rules: 60+ transforms × wordlist</span>
+                        </div>
+                        <button class="btn-primary" onclick="runAttack('rule')">Run Rule-Based Attack</button>
+                    </div>
+                    <div class="card attack-option" id="opt-brute">
+                        <div class="attack-opt-header">
+                            <span class="attack-badge">Phase 3</span>
+                            <h3>Brute Force (Short)</h3>
+                        </div>
+                        <p>Exhaustively tests all combinations of lowercase letters and digits (a-z, 0-9) up to 4 characters long.</p>
+                        <div class="attack-meta">
+                            <span>Charset: a-z0-9, max length: 4 (500k checks)</span>
+                        </div>
+                        <button class="btn-primary" onclick="runAttack('brute')">Run Brute Force</button>
+                    </div>
+                </div>
+                <div id="attack-progress" class="card hidden" style="margin-top:20px">
+                    <h3 id="attack-title">Running Attack...</h3>
+                    <div class="progress-bar-wrap">
+                        <div id="attack-progress-bar" class="progress-bar"></div>
+                    </div>
+                    <p id="attack-status" class="attack-status">Initializing...</p>
+                    <div id="attack-live-feed" class="live-feed"></div>
+                </div>
+                <div id="attack-summary" class="card hidden" style="margin-top:20px">
+                    <h3>Attack Summary</h3>
+                    <div id="attack-summary-content"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RESULTS -->
+        <section id="results" class="section">
+            <div class="section-header">
+                <h1>Cracking Results</h1>
+                <p class="subtitle">All cracked passwords from your attack sessions</p>
+            </div>
+            <div id="results-empty" class="empty-state small">
+                <p>No results yet. <a href="#" onclick="navigateTo('attack');return false;">Run an attack first →</a></p>
+            </div>
+            <div id="results-content" class="hidden">
+                <div class="results-stats-row">
+                    <div class="mini-stat"><span id="res-total" class="mini-val">0</span><span class="mini-label">Total</span></div>
+                    <div class="mini-stat"><span id="res-cracked" class="mini-val green">0</span><span class="mini-label">Cracked</span></div>
+                    <div class="mini-stat"><span id="res-remaining" class="mini-val red">0</span><span class="mini-label">Remaining</span></div>
+                    <div class="mini-stat"><span id="res-rate" class="mini-val purple">0%</span><span class="mini-label">Rate</span></div>
+                </div>
+                <div class="card">
+                    <div class="flex-between">
+                        <h3>Cracked Passwords</h3>
+                        <button class="btn-secondary" onclick="exportResults()">Export CSV</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table id="results-table">
+                            <thead><tr><th>#</th><th>Hash (Truncated)</th><th>Password</th><th>Attack Type</th><th>Strength</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card info-card" style="margin-top:20px">
+                    <h3>📊 Live Findings</h3>
+                    <ul id="findings-list" class="findings-list"></ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- HASH ALGORITHMS -->
+        <section id="hashing" class="section">
+            <div class="section-header">
+                <h1>Hash Algorithms</h1>
+                <p class="subtitle">Understanding how passwords are stored and why some are weaker</p>
+            </div>
+            <div class="algo-grid">
+                <div class="algo-card">
+                    <div class="algo-header"><span class="algo-badge danger">Weak</span><h3>MD5</h3></div>
+                    <p>128-bit hash, extremely fast to compute. Vulnerable to rainbow tables and collision attacks.</p>
+                    <div class="algo-detail"><span>Speed:</span><span class="highlight">~25 billion/sec (GPU)</span></div>
+                    <div class="algo-detail"><span>Hashcat Mode:</span><code>-m 0</code></div>
+                    <div class="algo-example"><span>password → </span><code>5f4dcc3b5aa765d61d8327deb882cf99</code></div>
+                </div>
+                <div class="algo-card">
+                    <div class="algo-header"><span class="algo-badge danger">Weak</span><h3>NTLM</h3></div>
+                    <p>Windows password hash. No salting, fast to compute. Used in Active Directory environments.</p>
+                    <div class="algo-detail"><span>Speed:</span><span class="highlight">~77 billion/sec (GPU)</span></div>
+                    <div class="algo-detail"><span>Hashcat Mode:</span><code>-m 1000</code></div>
+                    <div class="algo-example"><span>password → </span><code>a4f49c406510bdcab6824ee7c30fd852</code></div>
+                </div>
+                <div class="algo-card">
+                    <div class="algo-header"><span class="algo-badge warning">Moderate</span><h3>SHA-256</h3></div>
+                    <p>256-bit hash, part of SHA-2 family. Better than MD5 but still too fast without salting.</p>
+                    <div class="algo-detail"><span>Speed:</span><span class="highlight">~8 billion/sec (GPU)</span></div>
+                    <div class="algo-detail"><span>Hashcat Mode:</span><code>-m 1400</code></div>
+                    <div class="algo-example"><span>password → </span><code>5e884898da2805...(64 chars)</code></div>
+                </div>
+                <div class="algo-card">
+                    <div class="algo-header"><span class="algo-badge safe">Strong</span><h3>bcrypt</h3></div>
+                    <p>Adaptive hash with built-in salt and configurable work factor. Industry standard for passwords.</p>
+                    <div class="algo-detail"><span>Speed:</span><span class="highlight">~28,000/sec (GPU)</span></div>
+                    <div class="algo-detail"><span>Hashcat Mode:</span><code>-m 3200</code></div>
+                    <div class="algo-example"><span>password → </span><code>$2b$12$LJ3m4y...</code></div>
+                </div>
+            </div>
+            <div class="card info-card">
+                <h3>🔑 Key Takeaway</h3>
+                <p>Fast hashes like MD5 and NTLM are <strong>not designed for password storage</strong>. Modern systems should use <strong>bcrypt, scrypt, or Argon2</strong> which are intentionally slow to resist brute-force attacks.</p>
+            </div>
+        </section>
+
+        <!-- SALTING -->
+        <section id="salting" class="section">
+            <div class="section-header">
+                <h1>Salting & Defense</h1>
+                <p class="subtitle">How salting and proper hashing protect against cracking attacks</p>
+            </div>
+            <div class="salt-demo card">
+                <h3>What is Salting?</h3>
+                <div class="salt-visual">
+                    <div class="salt-step">
+                        <div class="salt-label">Without Salt</div>
+                        <div class="salt-flow">
+                            <span class="salt-item">"password"</span>
+                            <span class="salt-arrow">→</span>
+                            <span class="salt-item hash">MD5()</span>
+                            <span class="salt-arrow">→</span>
+                            <span class="salt-item result">5f4dcc3b...</span>
+                        </div>
+                        <p class="salt-note danger-text">Same input = Same hash. Vulnerable to rainbow tables.</p>
+                    </div>
+                    <div class="salt-step">
+                        <div class="salt-label">With Salt</div>
+                        <div class="salt-flow">
+                            <span class="salt-item">"password"</span>
+                            <span class="salt-plus">+</span>
+                            <span class="salt-item salt">"x9$kQ2"</span>
+                            <span class="salt-arrow">→</span>
+                            <span class="salt-item hash">MD5()</span>
+                            <span class="salt-arrow">→</span>
+                            <span class="salt-item result safe">a8f5e103...</span>
+                        </div>
+                        <p class="salt-note safe-text">Unique salt per user = Unique hash. Rainbow tables useless.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="defense-grid">
+                <div class="defense-card">
+                    <div class="defense-icon">🧂</div>
+                    <h4>Use Unique Salts</h4>
+                    <p>Generate a random salt for each password. Makes precomputed attacks infeasible.</p>
+                </div>
+                <div class="defense-card">
+                    <div class="defense-icon">🐢</div>
+                    <h4>Use Slow Hashing</h4>
+                    <p>bcrypt, scrypt, Argon2 are designed to be slow. Each guess costs significant computation.</p>
+                </div>
+                <div class="defense-card">
+                    <div class="defense-icon">📏</div>
+                    <h4>Enforce Complexity</h4>
+                    <p>Minimum 12 characters, mix of upper/lower/digits/symbols. Block common passwords.</p>
+                </div>
+                <div class="defense-card">
+                    <div class="defense-icon">🔐</div>
+                    <h4>Multi-Factor Auth</h4>
+                    <p>Even if cracked, MFA adds a second barrier. Use TOTP, hardware keys, or biometrics.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- COMMANDS -->
+        <section id="commands" class="section">
+            <div class="section-header">
+                <h1>Hashcat Commands Reference</h1>
+                <p class="subtitle">Essential commands for real-world Hashcat usage</p>
+            </div>
+            <div class="commands-list">
+                <div class="cmd-card card"><h4>Dictionary Attack</h4><div class="code-block"><pre>hashcat -m 1000 -a 0 hashes.txt rockyou.txt -o cracked.txt</pre></div></div>
+                <div class="cmd-card card"><h4>Rule-Based Attack (best64)</h4><div class="code-block"><pre>hashcat -m 1000 -a 0 hashes.txt rockyou.txt -r rules/best64.rule -o cracked.txt</pre></div></div>
+                <div class="cmd-card card"><h4>Brute Force (8 chars, mixed)</h4><div class="code-block"><pre>hashcat -m 1000 -a 3 hashes.txt ?a?a?a?a?a?a?a?a -o cracked.txt</pre></div></div>
+                <div class="cmd-card card"><h4>Show Cracked Results</h4><div class="code-block"><pre>hashcat -m 1000 hashes.txt --show</pre></div></div>
+                <div class="cmd-card card"><h4>Benchmark GPU Performance</h4><div class="code-block"><pre>hashcat -b -m 1000</pre></div></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
